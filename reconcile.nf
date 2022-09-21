@@ -1,6 +1,6 @@
 
 // ------ parameters -------
- 
+
 params.run = "test"
 
 params.input_dir = file("runs/${params.run}/clustering")
@@ -66,7 +66,7 @@ channel.fromPath( "${params.input_dir}/*", type: 'dir')
 
 workflow {
     
-    cluster_ch = input_ch.map { [
+    reconcile_ch = input_ch.map { [
             it.getSimpleName(), 
             file("$it/filtlong_reads.fastq", type: 'dir'),
             file("$it/cluster_*", type: 'dir')
@@ -79,7 +79,7 @@ workflow {
             file("${it[2]}/*_contigs", type: 'dir')
             ]}
 
-    reconcile(cluster_ch)
+    reconcile(reconcile_ch)
     
     // concatenate summary files and save in the input directory as reconcile_summary.txt
     reconcile.summary.collectFile(name: 'reconcile_summary.txt', storeDir: params.input_dir, newLine: true)
