@@ -1,32 +1,11 @@
 
-// 
+// ------ parameters -------
+ 
 params.run = "test"
 
-// directory containing the basecalled reads
 params.input_dir = file("runs/${params.run}/clustering")
 
-// ------- capture and setup input -------
-
-// capture barcode folders
-barcodes_ch = Channel.fromPath("${params.input_dir}/barcode*", type: 'dir')
-
-
-// separate into barcode label, filtlong reads and cluster folder
-cluster_ch = barcodes_ch
-    .map { [
-        it.getSimpleName(), 
-        file("$it/filtlong_reads.fastq", type: 'dir'),
-        file("$it/cluster_*", type: 'dir')
-           ]}
-    .transpose()
-    .map {[ 
-        it[0],
-        it[2].getSimpleName(),
-        it[1],
-        file("${it[2]}/*_contigs", type: 'dir')
-        ]}
-
-// ------- workflow -------
+// ------- process -------
 
 // PROCESS -> reconcile
 // - performs trycycle reconcile
@@ -39,17 +18,17 @@ process reconcile {
 
     label 'q30m_highmem'
 
-    publishDir "$params.input_dir/$bc/$cl",
+    publishDir "$params.input_dir/$sample_id/$cl",
         mode: 'copy',
         pattern: '{reconcile_log.txt,2_all_seqs.fasta}'
 
     input:
-        tuple val(bc), val(cl), file(reads), file(cl_dirs) from cluster_ch
+        tuple val(sample_id), val(cl), file(reads), file(cl_dirs)
 
     output:
         path("reconcile_log.txt")
         path("2_all_seqs.fasta") optional true
-        path("summary_log.txt") into summary_ch
+        path("summary_log.txt") emit: summary
 
 
     script:
@@ -63,7 +42,7 @@ process reconcile {
         || echo process failed >> reconcile_log.txt
 
         # append to file the tag of barcode and cluster
-        echo $bc $cl >> reconcile_log.txt
+        echo $sample_id $cl >> reconcile_log.txt
 
         # write on file whether reconcile was successful. If so, move generated file
         # to main directory for capture
@@ -79,5 +58,30 @@ process reconcile {
         """
 }
 
-// concatenate summary files and save in the input directory as reconcile_summary.txt
-summary_ch.collectFile(name: 'reconcile_summary.txt', storeDir: params.input_dir, newLine: true)
+// ------------ workflow -----------------
+
+channel.fromPath( "${params.input_dir}/*", type: 'dir')
+    .ifEmpty { error "Cannot find directories matching: ${params.input_dir}/*" }
+    .set { input_ch }
+
+workflow {
+    
+    cluster_ch = input_ch.map { [
+            it.getSimpleName(), 
+            file("$it/filtlong_reads.fastq", type: 'dir'),
+            file("$it/cluster_*", type: 'dir')
+        ]}
+        .transpose()
+        .map {[ 
+            it[0],
+            it[2].getSimpleName(),
+            it[1],
+            file("${it[2]}/*_contigs", type: 'dir')
+            ]}
+
+    reconcile(cluster_ch)
+    
+    // concatenate summary files and save in the input directory as reconcile_summary.txt
+    reconcile.summary.collectFile(name: 'reconcile_summary.txt', storeDir: params.input_dir, newLine: true)
+
+}

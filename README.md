@@ -1,14 +1,28 @@
-# Bacterial genome assembly pipeline
+# Genome assembly pipeline
 
-This repo contains a set of [Nextflow](https://www.nextflow.io/) workflows to automatize basecalling and assembling bacterial genomes from Nanopore sequencing. It can be run in parallel for different barcodes, and uses the SLURM protocol to dispatch jobs on a cluster. It is based on [trycycler](https://github.com/rrwick/Trycycler). This is currently a work in progress.
+This repo contains a set of [Nextflow](https://www.nextflow.io/) workflows to parallelize the assembly of bacterial genomes using [trycycler](https://github.com/rrwick/Trycycler). It uses the SLURM protocol to dispatch jobs on a cluster.
 
 ## Setup
 
-## Assembly pipeline
+To initialize the pipeline create the `g-assembly` conda environment from the provided environment file `base_env.yml`
+
+```bash
+conda env create --file base_env.yml
+conda activate g-assembly
+```
+
+This will take care of installing nextflow and other dependencies.
+
+## Assembling the genomes
+
+Genome assembly requires the execution of three different workflows in order:
+1. `assemble.nf`
+2. `reconcile.nf`
+3. `consensus.nf`
 
 ### Assemble
 
-The `assemble` workflow takes care of assembling genomes following trycyler's procedure. It can be run with: 
+The `assemble` workflow takes care of assembling genomes following trycyler's procedure, using raven, flye and miniasm+minipolish. It can be run with:
 
 ```bash
 nextflow run assemble.nf \
@@ -49,9 +63,7 @@ Nb: if the computational node has no access to the internet, `medaka` could fail
 2. Once the corresponding conda environment is activated, the model can be installed by running `medaka tools download_models --models r941_min_high_g360`
 
 
-## Helper scripts
+## import data from the cluster
 
-## import_data.py
-
-This script is used to archive the result of basecalling nanopore reads to the proper folder the cluster.
+The script `scripts/import_data.py` is used to archive the result of basecalling nanopore reads to the proper folder the cluster.
 For details on how to use it see `scripts/archive_README.md`.
