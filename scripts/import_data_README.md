@@ -20,6 +20,9 @@ optional arguments:
 ```
 The arguments are:
 - `samples_yml`
+- `runs_fld`: the 
+- `experiment_fld`: the archive folder in which all experiments are stored. Default value is `/scicore/home/nccr-antiresist/GROUP/unibas/neher/experiments`
+
 
 
 an example of usage is:
@@ -32,6 +35,7 @@ python3 scripts/import_data.py \
 
 ## samples yaml file
 
+The yaml file has structure:
 
 ```yaml
 run-id: test_run

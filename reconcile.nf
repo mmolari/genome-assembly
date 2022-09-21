@@ -28,7 +28,7 @@ process reconcile {
     output:
         path("reconcile_log.txt")
         path("2_all_seqs.fasta") optional true
-        path("summary_log.txt") emit: summary
+        path("summary_log.txt"), emit: summary
 
 
     script:
@@ -82,6 +82,6 @@ workflow {
     reconcile(reconcile_ch)
     
     // concatenate summary files and save in the input directory as reconcile_summary.txt
-    reconcile.summary.collectFile(name: 'reconcile_summary.txt', storeDir: params.input_dir, newLine: true)
+    reconcile.out.summary.collectFile(name: 'reconcile_summary.txt', storeDir: params.input_dir, newLine: true)
 
 }
