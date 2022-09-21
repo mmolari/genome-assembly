@@ -18,7 +18,7 @@ process msa {
         pattern : "3_msa.fasta"
 
     input:
-        tuple val(code), "2_all_seqs.fasta"
+        tuple val(code), file("2_all_seqs.fasta")
 
     output:
         tuple val(code), file("3_msa.fasta")
@@ -38,7 +38,7 @@ process partition {
         pattern : "4_reads.fastq"
 
     input:
-        tuple val(code), file(reads), "2_all_seqs.fasta"
+        tuple val(code), file(reads), file("2_all_seqs.fasta")
 
     output:
         tuple val(code), file("4_reads.fastq")
@@ -59,7 +59,7 @@ process consensus {
         pattern : "7_final_consensus.fasta"
 
     input:
-        tuple val(code), "2_all_seqs.fasta", "3_msa.fasta", "4_reads.fastq"
+        tuple val(code), file("2_all_seqs.fasta"), file("3_msa.fasta"), file("4_reads.fastq")
 
     output:
         tuple val(code), file("7_final_consensus.fasta")
@@ -174,8 +174,7 @@ workflow {
     
     // create two channels with just label and 2_all_seqs.fasta
     // for msa and consensus.
-    noreads_ch = cluster_ch.out
-        .map { [it[0], it[2]] }
+    noreads_ch = cluster_ch.map { [it[0], it[2]] }
 
     msa(noreads_ch)
 
