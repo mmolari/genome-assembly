@@ -38,7 +38,11 @@ process reconcile {
         mv *_contigs $cl
 
         # run trycycle reconcile. Save stout and stderr to file. Escape possible errors
-        trycycler reconcile --reads $reads --cluster_dir $cl > reconcile_log.txt 2>&1 \
+        trycycler reconcile \
+            --reads $reads \
+            --cluster_dir $cl \
+            --threads 8 \
+        > reconcile_log.txt 2>&1 \
         || echo process failed >> reconcile_log.txt
 
         # append to file the tag of barcode and cluster

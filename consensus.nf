@@ -7,11 +7,11 @@ params.run = "test"
 params.input_dir = file("runs/${params.run}/clustering")
 
 
-// ------- workflow -------
+// ------- processes -------
 
 process msa {
 
-    label 'q30m'
+    label 'q30m_16cores'
 
     publishDir "$params.input_dir/$code",
         mode : 'copy',
@@ -25,7 +25,7 @@ process msa {
 
     script:
         """
-        trycycler msa --cluster_dir .
+        trycycler msa --threads 16 --cluster_dir .
         """
 }
 
@@ -45,7 +45,7 @@ process partition {
 
     script:
         """
-        trycycler partition --reads $reads --cluster_dirs .
+        trycycler partition --threads 8 --reads $reads --cluster_dirs .
         """
 }
 
@@ -66,7 +66,7 @@ process consensus {
 
     script:
         """
-        trycycler consensus --cluster_dir .
+        trycycler consensus --threads 8 --cluster_dir .
         """
 
 }
@@ -98,7 +98,7 @@ process medaka_polish {
             -t 8
         mv medaka/consensus.fasta medaka_temp.fasta
         rm -r medaka
-        echo ">${code}_consensus" > 8_medaka.fasta
+        echo ">${code.find(/(?<=\/)[^\/]+$/)}_consensus" > 8_medaka.fasta
         tail -n +2 medaka_temp.fasta >> 8_medaka.fasta
         """
 
@@ -110,10 +110,10 @@ process concatenate {
     label 'q30m_1core'
 
     input:
-        tuple val(bc), file("medaka_*.fasta")
+        tuple val(sample_id), file("medaka_*.fasta")
 
     output:
-        tuple val(bc), file("medaka_consensus.fasta")
+        tuple val(sample_id), file("medaka_consensus.fasta")
 
     script:
     """
@@ -129,18 +129,22 @@ process prokka {
 
     conda 'conda_envs/prokka_env.yml'
 
-    publishDir "$params.input_dir/$bc",
+    publishDir "$params.input_dir/$sample_id",
         mode : 'copy'
 
     input:
-        tuple val(bc), file("medaka_consensus.fasta")
+        tuple val(sample_id), file("medaka_consensus.fasta")
 
     output:
-        path("prokka_$bc", type: 'dir')
+        path("prokka", type: 'dir')
 
     script:
     """
-    prokka --outdir prokka_$bc --prefix ${bc}_genome --cpus 8 medaka_consensus.fasta
+    prokka \
+        --outdir prokka \
+        --prefix ${sample_id}_genome \
+        --cpus 8 \
+        medaka_consensus.fasta
     """
 }
 
@@ -154,48 +158,54 @@ channel.fromPath( "${params.input_dir}/*", type: 'dir')
 workflow {
 
     // performs three different operations:
-    // - captures barcode, filtlong_reads.fastq and list of clusters.
+    // - captures sample-id, filtlong_reads.fastq and list of clusters.
     // - transposes, to have one item per cluster with assigned barcode
     // - captures the label of destination folder barcodeXX/cluster_XXX,
     //     the filtlong_reads.fastq file and the 2_all_seqs.fasta file.
     cluster_ch = input_ch.map { [
-            it.getSimpleName(), 
-            file("$it/filtlong_reads.fastq", type: 'dir'),
-            file("$it/cluster_*", type: 'dir')
+            it.getSimpleName(),                             // sample-id
+            file("$it/filtlong_reads.fastq", type: 'dir'),  // filtlong reads
+            file("$it/cluster_*", type: 'dir')              // list of clusters
             ]}
-        .transpose()
+        .transpose()    // emit one item per cluster
         .map {[ 
-            "${it[0]}/${it[2].getSimpleName()}", // which file
-            it[1], // reads
-            file("${it[2]}/2_all_seqs.fasta", type: 'file') // all seqs
+            "${it[0]}/${it[2].getSimpleName()}",            // which file
+            it[1],                                          // filtlong reads
+            file("${it[2]}/2_all_seqs.fasta", type: 'file') // capture 2_all_seqs.fasta file produced by reconcile
             ]}
     
+    // creates 4_reads.fastq
     partition(cluster_ch)
     
     // create two channels with just label and 2_all_seqs.fasta
     // for msa and consensus.
     noreads_ch = cluster_ch.map { [it[0], it[2]] }
 
+    // creates 3_msa.fasta
     msa(noreads_ch)
 
     // combine three channels, for files 2,3,4
     // to be used as input of consensus
     consensus_ch = noreads_ch.join(msa.out).join(partition.out)
 
+    // creates 7_final_consensus.fasta
     consensus(consensus_ch)
 
     // join 7_final_consensus and 4_reads in a single channel
     medaka_ch = partition.out.join(consensus.out)
 
+    // creates 8_medaka.fasta
     medaka_polish(medaka_ch)
 
-    // groups 8_medaka output files by barcode
+    // groups 8_medaka output files by sample-id
     concatenate_ch = medaka_polish.out
         .map { ["${it[0]}".split('/')[0], it[1] ] }
         .groupTuple()
 
+    // concatenate all medaka files with the same sample-id, create medaka_consensus.fasta
     concatenate(concatenate_ch)
 
+    // execute prokka on all clusters for the same sample, create prokka_<sample-id> directory
     prokka(concatenate.out)
 
 }
