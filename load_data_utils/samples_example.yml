@@ -1,0 +1,12 @@
+run-id: test_run
+samples:
+  2022-09-21_neher_amoxicillin_run_september:
+    - D1V1
+    - D1V13
+    - D1V14
+    - D1V5
+    - D1V6
+    - D1V7
+    - D1V8
+  2022-09-21_diard_phage_test_diard:
+    - o37

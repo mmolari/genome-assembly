@@ -1,0 +1,10 @@
+/.nextflow*
+/work
+/guppy_bin
+/runs/*
+/reports
+/scripts/ignored/
+/files
+/scripts/miniasm_and_minipolish.sh
+.vscode
+archive
