@@ -60,25 +60,28 @@ process reconcile {
 
 // ------------ workflow -----------------
 
+// input channel: one entry per sample
 channel.fromPath( "${params.input_dir}/*", type: 'dir')
     .ifEmpty { error "Cannot find directories matching: ${params.input_dir}/*" }
     .set { input_ch }
 
 workflow {
     
+    
     reconcile_ch = input_ch.map { [
-            it.getSimpleName(), 
-            file("$it/filtlong_reads.fastq", type: 'dir'),
-            file("$it/cluster_*", type: 'dir')
+            it.getSimpleName(),                 // sample name
+            file("$it/filtlong_reads.fastq"),   // filtered reads
+            file("$it/cluster_*", type: 'dir')  // list of clusters
         ]}
-        .transpose()
+        .transpose() // transpose to have one entry per cluster
         .map {[ 
-            it[0],
-            it[2].getSimpleName(),
-            it[1],
-            file("${it[2]}/*_contigs", type: 'dir')
+            it[0],                                      // sample name
+            it[2].getSimpleName(),                      // cluster name 
+            it[1],                                      // filtlong_reads
+            file("${it[2]}/*_contigs", type: 'dir')     // list of contigs of the cluster
             ]}
 
+    // try to reconcile the cluster
     reconcile(reconcile_ch)
     
     // concatenate summary files and save in the input directory as reconcile_summary.txt
