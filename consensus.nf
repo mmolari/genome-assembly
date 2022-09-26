@@ -71,6 +71,20 @@ process consensus {
 
 }
 
+// Process executed locally that takes care of installing the model r941_min_high_g360
+// returns a dummy empty file to guarantee execution before medaka_polish
+process medaka_setup {
+
+    output:
+        file(".medaka_setup")
+
+    script:
+        """
+        medaka tools download_models --models r941_min_high_g360
+        touch .medaka_setup
+        """
+}
+
 // polish using medaka. Creates a 8_medaka.fasta file
 process medaka_polish {
 
@@ -84,6 +98,7 @@ process medaka_polish {
 
     input:
         tuple val(code), file(reads), file(consensus)
+        file(".medaka_setup")
 
     output:
         tuple val(code), file("8_medaka.fasta")
@@ -194,8 +209,10 @@ workflow {
     // join 7_final_consensus and 4_reads in a single channel
     medaka_ch = partition.out.join(consensus.out)
 
+    // install medaka model locally
+    medaka_setup()
     // creates 8_medaka.fasta
-    medaka_polish(medaka_ch)
+    medaka_polish(medaka_ch, medaka_setup.out)
 
     // groups 8_medaka output files by sample-id
     concatenate_ch = medaka_polish.out
