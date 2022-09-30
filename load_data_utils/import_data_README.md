@@ -25,7 +25,7 @@ The arguments are:
 
 an example of usage is:
 ```bash
-python3 scripts/import_data.py \
+python3 load_data_utils/import_data.py \
   --samples_yml scripts/samples_example.yml \
   --runs_fld runs \
   --experiment_fld /scicore/home/nccr-antiresist/GROUP/unibas/neher/experiments
