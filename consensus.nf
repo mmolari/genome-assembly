@@ -11,7 +11,7 @@ params.input_dir = file("runs/${params.run}/clustering")
 
 process msa {
 
-    label 'q30m_16cores'
+    label 'q6h_16cores'
 
     publishDir "$params.input_dir/$code",
         mode : 'copy',
@@ -74,6 +74,8 @@ process consensus {
 // Process executed locally that takes care of installing the model r941_min_high_g360
 // returns a dummy empty file to guarantee execution before medaka_polish
 process medaka_setup {
+
+    label 'medaka_setup'
 
     output:
         file(".medaka_setup")
