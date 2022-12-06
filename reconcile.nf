@@ -45,6 +45,9 @@ process reconcile {
         > reconcile_log.txt 2>&1 \
         || echo process failed >> reconcile_log.txt
 
+        # remove color characters in file
+        sed -i -r "s/\x1B\[([0-9]{{1,2}}(;[0-9]{{1,2}})?)?[mGK]//g" reconcile_log.txt
+
         # append to file the tag of barcode and cluster
         echo $sample_id $cl >> reconcile_log.txt
 
