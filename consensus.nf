@@ -77,8 +77,6 @@ process medaka_setup {
 
     label 'medaka_setup'
 
-    conda 'conda_envs/medaka_env.yml'
-
     output:
         file(".medaka_setup")
 
