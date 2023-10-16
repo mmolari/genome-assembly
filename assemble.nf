@@ -115,7 +115,7 @@ process assemble_mini {
 // clustering/sample_id` folder for further inspection.
 process trycycler_cluster {
 
-    label 'q30m'
+    label 'q6h_2h'
 
     publishDir params.output_dir, mode: 'copy'
 
